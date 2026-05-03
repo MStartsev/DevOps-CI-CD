@@ -54,7 +54,9 @@ bucket_name = "your-name-terraform-state"
 bucket      = "your-name-terraform-state"
 ```
 
-Замініть `your-name-terraform-state` на ваше ім'я (S3 bucket name - глобально унікальний).
+Замініть `your-name-terraform-state` на ваше ім'я (S3 bucket name - має бути глобально унікальним по всьому AWS).
+Формат: `<твоє-ім'я>-terraform-state-<рік>`
+Приклад: `john-doe-terraform-state-2026`.
 
 ### 2. Перший запуск — bootstrap
 
