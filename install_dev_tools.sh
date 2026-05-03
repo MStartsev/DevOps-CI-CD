@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Перевірка прав root
 if [ "$EUID" -ne 0 ]; then
@@ -98,7 +99,7 @@ else
 fi
 
 # Передаємо права на папку venv користувачу, який запустив скрипт через sudo
-if [ -n "$SUDO_USER" ]; then
+if [ -n "${SUDO_USER:-}" ]; then
   chown -R "$SUDO_USER:$SUDO_USER" "$VENV_DIR"
 fi
 
