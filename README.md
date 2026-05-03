@@ -142,12 +142,3 @@ ecr_repository_arn   => ARN ECR репозиторію
 ```
 
 ---
-
-## Git workflow
-
-```bash
-git checkout -b lesson-5
-git add .
-git commit -m "Add Terraform modules for S3, VPC, and ECR"
-git push origin lesson-5
-```
