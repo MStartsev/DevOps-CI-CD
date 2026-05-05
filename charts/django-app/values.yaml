@@ -1,0 +1,48 @@
+# Default values for django-app Helm chart
+# Override per environment: helm install -f values-prod.yaml ...
+
+# Image
+image:
+  repository: "PLACEHOLDER_ECR_URL"
+  tag: "latest"
+  pullPolicy: Always
+
+# Deployment
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+# Service
+service:
+  type: LoadBalancer # AWS NLB - external access
+  port: 80
+  targetPort: 8000 # Gunicorn inside the container
+
+# HPA (Horizontal Pod Autoscaler)
+autoscaler:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+# ConfigMap - environment variables (from lesson-4 docker-compose)
+config:
+  DJANGO_DEBUG: "False"
+  POSTGRES_DB: "mydb"
+  POSTGRES_USER: "myuser"
+  POSTGRES_HOST: "postgres-service" # K8s service name of the DB pod
+  POSTGRES_PORT: "5432"
+  ALLOWED_HOSTS: "localhost,.us-west-2.elb.amazonaws.com"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+
+# Secrets (mounted separately - do not store real values here)
+# Secrets: POSTGRES_PASSWORD and DJANGO_SECRET_KEY
+# kubectl create secret generic django-secret --from-env-file=.env
+secretName: "django-secret"
