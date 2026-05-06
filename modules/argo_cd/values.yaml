@@ -1,0 +1,38 @@
+# Argo CD custom values
+global:
+  domain: ""   # leave empty - use LoadBalancer IP
+
+server:
+  # Expose Argo CD UI via LoadBalancer
+  service:
+    type: LoadBalancer
+
+  # Disable TLS inside the pod (TLS terminated at LB)
+  extraArgs:
+    - --insecure
+
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+repoServer:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
+
+applicationSet:
+  enabled: true
+
+notifications:
+  enabled: false
+
+redis:
+  enabled: true

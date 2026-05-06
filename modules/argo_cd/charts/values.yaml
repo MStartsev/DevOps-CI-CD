@@ -1,0 +1,11 @@
+# Values for argocd-apps chart
+# Passed via helm_release set{} blocks in argo_cd.tf
+
+repoUrl: "https://github.com/MStartsev/DevOps-CI-CD.git"
+targetBranch: "lesson-8-9--main"           # Argo CD слідкує за main, куди Jenkins пушить
+chartPath: "charts/django-app"
+appNamespace: "django-app"
+
+image:
+  repository: "PLACEHOLDER_ECR_URL"   # overridden by Terraform via argo_cd.tf
+  tag: "latest"

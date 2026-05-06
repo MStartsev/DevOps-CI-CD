@@ -59,3 +59,25 @@ output "eks_cluster_ca_certificate" {
   value     = module.eks.cluster_ca_certificate
   sensitive = true
 }
+
+# Jenkins outputs
+output "jenkins_url" {
+  description = "Jenkins external URL (LoadBalancer)"
+  value       = module.jenkins.jenkins_url
+}
+
+output "jenkins_admin_password_secret" {
+  description = "K8s secret name with Jenkins admin password"
+  value       = module.jenkins.admin_password_secret
+}
+
+# Argo CD outputs
+output "argocd_url" {
+  description = "Argo CD external URL (LoadBalancer)"
+  value       = module.argo_cd.argocd_url
+}
+
+output "argocd_admin_password_command" {
+  description = "Command to retrieve initial Argo CD admin password"
+  value       = module.argo_cd.admin_password_command
+}

@@ -25,3 +25,8 @@ output "node_group_role_arn" {
 output "cluster_security_group_id" {
   value = aws_security_group.eks_cluster_sg.id
 }
+
+output "kaniko_role_arn" {
+  description = "IAM Role ARN for Kaniko IRSA"
+  value       = aws_iam_role.kaniko.arn
+}

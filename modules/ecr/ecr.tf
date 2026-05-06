@@ -48,7 +48,7 @@ resource "aws_ecr_lifecycle_policy" "main" {
         description  = "Keep last 10 tagged images"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["v"]
+          tagPrefixList = ["latest"]
           countType     = "imageCountMoreThan"
           countNumber   = 10
         }

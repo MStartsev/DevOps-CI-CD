@@ -3,7 +3,7 @@
 
 # Image
 image:
-  repository: "PLACEHOLDER_ECR_URL" # замінити: terraform output -raw ecr_repository_url
+  repository: "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
   tag: "latest"
   pullPolicy: Always
 
@@ -36,7 +36,7 @@ config:
   DJANGO_DEBUG: "False"
   POSTGRES_DB: "mydb"
   POSTGRES_USER: "myuser"
-  POSTGRES_HOST: "postgres-service" # K8s service name of the DB pod
+  POSTGRES_HOST: "django-app-postgres" # K8s service name of the DB pod
   POSTGRES_PORT: "5432"
   ALLOWED_HOSTS: "localhost,.us-west-2.elb.amazonaws.com"
   PYTHONDONTWRITEBYTECODE: "1"
@@ -46,3 +46,15 @@ config:
 # Secrets: POSTGRES_PASSWORD and DJANGO_SECRET_KEY
 # kubectl create secret generic django-secret --from-env-file=.env
 secretName: "django-secret"
+
+# PostgreSQL
+postgres:
+  image: "postgres:16-alpine"
+  storage: "2Gi" 
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"

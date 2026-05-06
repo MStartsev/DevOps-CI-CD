@@ -1,0 +1,113 @@
+// Jenkinsfile - CI/CD pipeline
+// Stages:
+//   1. Checkout        - clone source repo (branch: lesson-8-9)
+//   2. Build & Push    - build Docker image with Kaniko, push to ECR
+//   3. Update Helm     - update image.tag in charts/django-app/values.yaml
+//   4. Push to Git     - commit and push to lesson-8-9--main => Argo CD detects and syncs
+
+
+pipeline {
+  agent {
+    kubernetes {
+      label 'kaniko'
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: kaniko
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      command: [sleep]
+      args: ["99d"]
+    - name: git
+      image: alpine/git:latest
+      command: [sleep]
+      args: ["99d"]
+  volumes: []
+"""
+    }
+  }
+
+  environment {
+    AWS_REGION  = "us-west-2"
+    ECR_REPO    = "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
+    GIT_REPO    = "https://github.com/MStartsev/DevOps-CI-CD.git"
+    SRC_BRANCH  = "lesson-8-9"
+    DEPLOY_BRANCH = "lesson-8-9--main"
+    VALUES_FILE = "charts/django-app/values.yaml"
+    IMAGE_TAG   = "${BUILD_NUMBER}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        container('git') {
+          git branch: "${SRC_BRANCH}",
+              url: "${GIT_REPO}",
+              credentialsId: 'github-credentials'
+        }
+      }
+    }
+
+    stage('Build & Push to ECR') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \\
+              --context=dir:///${WORKSPACE}/django-src \\
+              --dockerfile=/${WORKSPACE}/django-src/Dockerfile \\
+              --destination=${ECR_REPO}:${IMAGE_TAG} \\
+              --destination=${ECR_REPO}:latest \\
+              --cache=true
+          """
+        }
+      }
+    }
+
+    stage('Update Helm values.yaml & Push to lesson-8-9--main') {
+      steps {
+        container('git') {
+          withCredentials([usernamePassword(
+            credentialsId: 'github-credentials',
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_TOKEN'
+          )]) {
+            sh """
+              git config user.email "jenkins@ci.local"
+              git config user.name "Jenkins CI"
+
+              # Fetch remote lesson-8-9--main; якщо гілка не існує - створюємо від SRC_BRANCH
+              git fetch origin ${DEPLOY_BRANCH} || true
+              git checkout -B ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH} 2>/dev/null || \\
+                git checkout -b ${DEPLOY_BRANCH}
+
+              # Забираємо лише values.yaml з SRC_BRANCH, щоб не створювати конфлікти
+              git checkout origin/${SRC_BRANCH} -- ${VALUES_FILE}
+
+              # Оновлюємо тег образу - Groovy підставляє IMAGE_TAG до запуску shell
+              sed -i 's|^  tag:.*|  tag: "${IMAGE_TAG}"|' ${VALUES_FILE}
+
+              git add ${VALUES_FILE}
+              git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]" || echo "Nothing to commit"
+
+              # Пушимо в lesson-8-9--main - \$ запобігає Groovy-інтерполяції
+              git push https://\${GIT_USER}:\${GIT_TOKEN}@github.com/MStartsev/DevOps-CI-CD.git ${DEPLOY_BRANCH}
+            """
+          }
+        }
+      }
+    }
+
+  }
+
+  post {
+    success {
+      echo "Pipeline finished. Argo CD watches 'lesson-8-9--main' and will sync automatically."
+    }
+    failure {
+      echo "Pipeline failed. Check logs above."
+    }
+  }
+}

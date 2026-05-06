@@ -1,0 +1,80 @@
+controller:
+  # Resources for Jenkins controller pod
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+
+  # Expose Jenkins via LoadBalancer
+  serviceType: LoadBalancer
+  servicePort: 8080
+
+  # Pre-install plugins required for the pipeline
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - configuration-as-code:latest
+    - pipeline-aws:latest
+    - credentials-binding:latest
+    - blueocean:latest
+
+  # JCasC - Jenkins Configuration as Code
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "github-credentials"
+                      username: "${GITHUB_USER}"
+                      password: "${GITHUB_TOKEN}"
+                      description: "GitHub token for pipeline"
+
+  # Environment variables injected into controller
+  containerEnv:
+    - name: GITHUB_USER
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-github-secret
+          key: username
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: jenkins-github-secret
+          key: token
+
+agent:
+  enabled: true
+  podTemplates:
+    kaniko: |
+      - name: kaniko
+        label: kaniko
+        # Використовуємо IRSA ServiceAccount замість docker secret
+        serviceAccountName: kaniko
+        containers:
+          - name: kaniko
+            image: gcr.io/kaniko-project/executor:debug
+            command: /busybox/cat
+            ttyEnabled: true
+          - name: git
+            image: alpine/git:latest
+            command: cat
+            ttyEnabled: true
+        # volumes: прибрано secretVolume - IRSA замінює ECR credentials
+
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: gp2
+
+serviceAccount:
+  create: true
+  name: jenkins
