@@ -36,11 +36,11 @@ Jenkins Pipeline (Kaniko agent в EKS)
 ├── 1. git clone lesson-8-9
 ├── 2. kaniko build + push => ECR :<BUILD_NUMBER> (via IRSA)
 ├── 3. sed image.tag в charts/django-app/values.yaml
-└── 4. git push => main
+└── 4. git push => lesson-8-9--main
 
 │ (Git change detected - polling або webhook)
 ▼
-Argo CD (watches main / charts/django-app)
+Argo CD (watches lesson-8-9--main / charts/django-app)
 └── helm upgrade django-app => EKS (automated sync)
 ```
 
