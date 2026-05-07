@@ -1,0 +1,12 @@
+apiVersion: v2
+name: django-app
+description: Helm chart for Django application on EKS with PostgreSQL and Nginx
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: DevOps Team
+keywords:
+  - django
+  - python
+  - postgresql
