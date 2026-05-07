@@ -1,0 +1,4 @@
+github_user       = "User_Name"
+github_token      = "ghp_your_personal_access_token"
+postgres_password = "your_db_password"
+django_secret_key = "your_django_secret_key"
