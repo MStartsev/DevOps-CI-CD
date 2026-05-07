@@ -24,6 +24,10 @@ spec:
         app: {{ .Release.Name }}-django
         version: {{ .Values.image.tag | quote }}
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nc -z {{ .Release.Name }}-postgres 5432; do echo waiting for postgres; sleep 2; done']
       # Pull ECR image using node IAM role (AmazonEC2ContainerRegistryReadOnly)
       containers:
         - name: django
