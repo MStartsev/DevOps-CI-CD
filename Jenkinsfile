@@ -67,38 +67,40 @@ spec:
     }
 
     stage('Update Helm values.yaml & Push to lesson-8-9--main') {
-      steps {
+    steps {
         container('git') {
-          withCredentials([usernamePassword(
-            credentialsId: 'github-credentials',
-            usernameVariable: 'GIT_USER',
-            passwordVariable: 'GIT_TOKEN'
-          )]) {
-            sh """
-              git config user.email "jenkins@ci.local"
-              git config user.name "Jenkins CI"
+            withCredentials([usernamePassword(
+                credentialsId: 'github-credentials',
+                usernameVariable: 'GIT_USER',
+                passwordVariable: 'GIT_TOKEN'
+            )]) {
+                sh """
+                    git config --global user.email "jenkins@ci.local"
+                    git config --global user.name "Jenkins CI"
 
-              # Fetch remote lesson-8-9--main; якщо гілка не існує - створюємо від SRC_BRANCH
-              git fetch origin ${DEPLOY_BRANCH} || true
-              git checkout -B ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH} 2>/dev/null || \\
-                git checkout -b ${DEPLOY_BRANCH}
+                    # Клонуємо репо в окрему папку
+                    git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/MStartsev/DevOps-CI-CD.git /tmp/repo
+                    cd /tmp/repo
 
-              # Забираємо лише values.yaml з SRC_BRANCH, щоб не створювати конфлікти
-              git checkout origin/${SRC_BRANCH} -- ${VALUES_FILE}
+                    # Переключаємось на DEPLOY_BRANCH
+                    git fetch origin ${DEPLOY_BRANCH} || true
+                    git checkout -B ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH} 2>/dev/null || git checkout -b ${DEPLOY_BRANCH}
 
-              # Оновлюємо тег образу - Groovy підставляє IMAGE_TAG до запуску shell
-              sed -i 's|^  tag:.*|  tag: "${IMAGE_TAG}"|' ${VALUES_FILE}
+                    # Беремо values.yaml з вихідної гілки
+                    git checkout origin/${SRC_BRANCH} -- ${VALUES_FILE}
 
-              git add ${VALUES_FILE}
-              git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]" || echo "Nothing to commit"
+                    # Оновлюємо тег
+                    sed -i "s/tag:.*/tag: \\"${IMAGE_TAG}\\"/" ${VALUES_FILE}
 
-              # Пушимо в lesson-8-9--main - \$ запобігає Groovy-інтерполяції
-              git push https://\${GIT_USER}:\${GIT_TOKEN}@github.com/MStartsev/DevOps-CI-CD.git ${DEPLOY_BRANCH}
-            """
-          }
+                    git add ${VALUES_FILE}
+                    git diff --cached --quiet && echo "Nothing to commit" && exit 0
+                    git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]"
+                    git push https://${GIT_USER}:${GIT_TOKEN}@github.com/MStartsev/DevOps-CI-CD.git ${DEPLOY_BRANCH}
+                """
+            }
         }
-      }
     }
+}
 
   }
 

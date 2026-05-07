@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.0"
     }
+    tls = {
+      source = "hashicorp/tls",
+      version = "~> 4.0"
+    }
   }
 
   backend "s3" {
@@ -60,7 +64,7 @@ variable "django_secret_key" {
 
 
 data "aws_eks_cluster_auth" "main" {
-  name = module.eks.cluster_name
+  name = try(module.eks.cluster_name, "devops_project")
 }
 
 variable "eks_cluster_name" {
@@ -77,8 +81,8 @@ provider "kubernetes" {
 
 provider "helm" {
   kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
-    token                  = data.aws_eks_cluster_auth.main.token
+    host                   = try(module.eks.cluster_endpoint, "https://localhost")
+    cluster_ca_certificate = try(base64decode(module.eks.cluster_ca_certificate), "")
+    token                  = try(data.aws_eks_cluster_auth.main.token, "")
   }
 }
