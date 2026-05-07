@@ -78,7 +78,6 @@ spec:
                     git config --global user.email "jenkins@ci.local"
                     git config --global user.name "Jenkins CI"
 
-                    # Клонуємо репо в окрему папку
                     git clone https://${GIT_USER}:${GIT_TOKEN}@github.com/MStartsev/DevOps-CI-CD.git /tmp/repo
                     cd /tmp/repo
 
@@ -86,13 +85,13 @@ spec:
                     git fetch origin ${DEPLOY_BRANCH} || true
                     git checkout -B ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH} 2>/dev/null || git checkout -b ${DEPLOY_BRANCH}
 
-                    # Беремо values.yaml з вихідної гілки
-                    git checkout origin/${SRC_BRANCH} -- ${VALUES_FILE}
+                    # Копіюємо ВЕСЬ charts/ з lesson-8-9
+                    git checkout origin/${SRC_BRANCH} -- charts/
 
-                    # Оновлюємо тег
+                    # Оновлюємо тільки тег у values.yaml
                     sed -i "s/tag:.*/tag: \\"${IMAGE_TAG}\\"/" ${VALUES_FILE}
 
-                    git add ${VALUES_FILE}
+                    git add charts/
                     git diff --cached --quiet && echo "Nothing to commit" && exit 0
                     git commit -m "ci: update image tag to ${IMAGE_TAG} [skip ci]"
                     git push https://${GIT_USER}:${GIT_TOKEN}@github.com/MStartsev/DevOps-CI-CD.git ${DEPLOY_BRANCH}
