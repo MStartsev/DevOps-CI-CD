@@ -4,7 +4,7 @@
 # Image
 image:
   repository: "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
-  tag: "6"
+  tag: "7"
   pullPolicy: Always
 
 # Deployment

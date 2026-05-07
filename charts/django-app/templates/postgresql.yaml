@@ -16,6 +16,10 @@ spec:
       labels:
         app: {{ .Release.Name }}-postgres
     spec:
+      securityContext: 
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
       containers:
         - name: postgres
           image: "{{ .Values.postgres.image }}"
