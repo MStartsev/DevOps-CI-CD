@@ -4,7 +4,7 @@
 # Image
 image:
   repository: "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
-  tag: "9"
+  tag: "10"
   pullPolicy: Always
 
 # Deployment
@@ -38,7 +38,7 @@ config:
   POSTGRES_USER: "myuser"
   POSTGRES_HOST: "django-app-postgres" # K8s service name of the DB pod
   POSTGRES_PORT: "5432"
-  ALLOWED_HOSTS: "localhost,.us-west-2.elb.amazonaws.com"
+  ALLOWED_HOSTS: "*"
   PYTHONDONTWRITEBYTECODE: "1"
   PYTHONUNBUFFERED: "1"
 
