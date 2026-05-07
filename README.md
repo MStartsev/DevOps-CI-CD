@@ -46,55 +46,6 @@ Argo CD (watches lesson-8-9--main / charts/django-app)
 
 ---
 
-Ось повний фінальний README.md з доданим Кроком 0:
-
-text
-# Lesson 8-9 — CI/CD: Jenkins + Argo CD + Helm + Terraform
-
-Повний CI/CD процес на AWS EKS:  
-**Jenkins** збирає образ => пушить у ECR => оновлює `values.yaml` у Git =>  
-**Argo CD** підхоплює зміни => синхронізує Helm chart у кластері.
-
----
-
-## Структура проєкту
-├── main.tf | backend.tf | outputs.tf
-├── Jenkinsfile CI pipeline
-├── modules/
-│ ├── s3-backend/ S3 + DynamoDB (remote state)
-│ ├── vpc/ VPC, підмережі, IGW, NAT GW
-│ ├── ecr/ ECR репозиторій
-│ ├── eks/ EKS кластер + OIDC provider + EBS CSI driver
-│ ├── jenkins/ Jenkins via Helm (Kaniko agent, JCasC)
-│ └── argo_cd/ Argo CD via Helm + Application CRD
-│ └── charts/ Helm chart: Application + Repository resources
-├── charts/
-│ └── django-app/ Django Helm chart (watched by Argo CD)
-└── django-src/ Django source + Dockerfile
-
-text
-
----
-
-## Схема CI/CD
-Developer push
-│
-▼
-Jenkins Pipeline (Kaniko agent в EKS)
-├── 1. git clone lesson-8-9
-├── 2. kaniko build + push => ECR :<BUILD_NUMBER> (via IRSA)
-├── 3. sed image.tag в charts/django-app/values.yaml
-└── 4. git push charts/ => lesson-8-9--main
-
-│ (Git change detected — Argo CD polling кожні 3 хв)
-▼
-Argo CD (watches lesson-8-9--main / charts/django-app)
-└── helm upgrade django-app => EKS (automated sync)
-
-text
-
----
-
 ## Крок 0. Ініціалізація Remote State
 
 > **Важливо:** S3 bucket і DynamoDB мають бути створені ДО ініціалізації backend.
