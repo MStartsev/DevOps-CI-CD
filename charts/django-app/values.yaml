@@ -34,9 +34,9 @@ autoscaler:
 # ConfigMap - environment variables (from lesson-4 docker-compose)
 config:
   DJANGO_DEBUG: "False"
-  POSTGRES_DB: "mydb"
-  POSTGRES_USER: "myuser"
-  POSTGRES_HOST: "django-app-postgres" # K8s service name of the DB pod
+  POSTGRES_DB: "appdb"  # matches RDS database_name; overridden by Argo CD parameters
+  POSTGRES_USER: "dbadmin"  # matches RDS username; overridden by Argo CD parameters
+  POSTGRES_HOST: "" # Overridden by Argo CD with RDS endpoint via Helm parameters
   POSTGRES_PORT: "5432"
   ALLOWED_HOSTS: "*"
   PYTHONDONTWRITEBYTECODE: "1"
@@ -47,8 +47,9 @@ config:
 # kubectl create secret generic django-secret --from-env-file=.env
 secretName: "django-secret"
 
-# PostgreSQL
+# PostgreSQL in-cluster (disabled when using RDS)
 postgres:
+  enabled: false  # false = use AWS RDS; true = deploy in-cluster PostgreSQL StatefulSet
   image: "postgres:16-alpine"
   storage: "2Gi" 
   resources:

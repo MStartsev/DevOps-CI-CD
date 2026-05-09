@@ -2,10 +2,16 @@
 # Passed via helm_release set{} blocks in argo_cd.tf
 
 repoUrl: "https://github.com/MStartsev/DevOps-CI-CD.git"
-targetBranch: "lesson-8-9--main"           # Argo CD слідкує за main, куди Jenkins пушить
+targetBranch: "main"           # Argo CD слідкує за main, куди Jenkins пушить
 chartPath: "charts/django-app"
 appNamespace: "django-app"
 
 image:
   repository: "PLACEHOLDER_ECR_URL"   # overridden by Terraform via argo_cd.tf
   tag: "latest"
+
+# RDS connection (overrides in-cluster PostgreSQL)
+rdsEndpoint: ""          # overridden by Terraform via argo_cd.tf set{}
+postgresEnabled: "false" # disable in-cluster StatefulSet
+rdsDatabaseName: "appdb"
+rdsUsername: "dbadmin"

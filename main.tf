@@ -66,11 +66,14 @@ module "argo_cd" {
   cluster_endpoint       = module.eks.cluster_endpoint
   cluster_ca_certificate = module.eks.cluster_ca_certificate
   repo_url               = "https://github.com/MStartsev/DevOps-CI-CD.git"
-  target_branch          = "lesson-8-9--main"
+  target_branch          = "main"
   chart_path             = "charts/django-app"
   ecr_repo_url           = module.ecr.repository_url
   depends_on             = [module.eks]
   app_namespace          = "django-app"
+  rds_endpoint           = module.rds.endpoint
+  rds_database_name      = "appdb"
+  rds_username           = "dbadmin"
 }
 
 # End Phase 2 block
