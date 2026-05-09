@@ -1,6 +1,6 @@
 // Jenkinsfile - CI/CD pipeline
 // Stages:
-//   1. Checkout        - clone source repo (branch: lesson-8-9)
+//   1. Checkout        - clone source repo (branch: lesson-db-module)
 //   2. Build & Push    - build Docker image with Kaniko, push to ECR
 //   3. Update Helm     - update image.tag in charts/django-app/values.yaml
 //   4. Push to Git     - commit and push to lesson-8-9--main => Argo CD detects and syncs
@@ -33,7 +33,7 @@ spec:
     AWS_REGION  = "us-west-2"
     ECR_REPO    = "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
     GIT_REPO    = "https://github.com/MStartsev/DevOps-CI-CD.git"
-    SRC_BRANCH  = "lesson-8-9"
+    SRC_BRANCH  = "lesson-db-module"
     DEPLOY_BRANCH = "lesson-8-9--main"
     VALUES_FILE = "charts/django-app/values.yaml"
     IMAGE_TAG   = "${BUILD_NUMBER}"
@@ -85,7 +85,7 @@ spec:
                     git fetch origin ${DEPLOY_BRANCH} || true
                     git checkout -B ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH} 2>/dev/null || git checkout -b ${DEPLOY_BRANCH}
 
-                    # Копіюємо ВЕСЬ charts/ з lesson-8-9
+                    # Копіюємо ВЕСЬ charts/ з lesson-db-module
                     git checkout origin/${SRC_BRANCH} -- charts/
 
                     # Оновлюємо тільки тег у values.yaml
