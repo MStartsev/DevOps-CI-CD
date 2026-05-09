@@ -16,6 +16,7 @@
 │   ├── vpc/           VPC, підмережі, IGW, NAT GW
 │   ├── ecr/           ECR репозиторій
 │   ├── eks/           EKS кластер + OIDC provider + EBS CSI driver
+│   ├── rds/           Модуль для RDS
 │   ├── jenkins/       Jenkins via Helm (Kaniko agent, JCasC)
 │   └── argo_cd/       Argo CD via Helm + Application CRD
 │       └── charts/    Helm chart: Application + Repository resources
@@ -53,7 +54,7 @@ Argo CD (watches lesson-8-9--main / charts/django-app)
 
 Скопіюй приклад і заповни своїми значеннями
 `cp terraform.tfvars.example terraform.tfvars`
-або задай через TF_VAR_ змінні середовища (Крок 1)
+або задай через TF*VAR* змінні середовища (Крок 1)
 
 ### 0.1 Закоментуй backend у `backend.tf`
 
@@ -109,6 +110,7 @@ export TF_VAR_django_secret_key="your_django_secret_key"
 ```
 
 > **Windows PowerShell:**
+>
 > ```powershell
 > $env:TF_VAR_github_user="User_Name"
 > $env:TF_VAR_github_token="ghp_your_personal_access_token"
@@ -202,6 +204,7 @@ kubectl exec --namespace jenkins -it svc/jenkins -c jenkins \
 3. **Save** => **Build Now**
 
 Після успішного запуску побачиш 3 зелені стадії:
+
 - `Build & Push Docker Image (Kaniko)`
 - `Update Helm values.yaml & Push to lesson-8-9--main`
 
@@ -251,7 +254,7 @@ kubectl get pods -n django-app
 
 ```bash
 # Спочатку прибрати K8s LoadBalancer ресурси
-helm uninstall django-app -n django-app 
+helm uninstall django-app -n django-app
 helm uninstall jenkins -n jenkins
 helm uninstall argocd -n argocd
 kubectl delete namespace django-app
@@ -267,24 +270,156 @@ terraform destroy -auto-approve
 ## Опис модулів
 
 ### `modules/eks/aws_ebs_csi_driver.tf`
+
 EBS CSI Driver як EKS managed add-on. Використовує OIDC + IRSA для безпечного доступу до AWS API. Створює StorageClass `gp2` як default - потрібна для Jenkins PVC та PostgreSQL PVC.
 
 ### `modules/jenkins`
+
 Jenkins встановлюється через Helm chart `jenkins/jenkins` версії `5.8.17` з образом `jenkins/jenkins:2.492.3-lts-jdk17`. Включає:
+
 - Kubernetes plugin для dynamic agents (Kaniko + Git контейнери)
 - Kaniko авторизується в ECR через IRSA (`kaniko` ServiceAccount)
 - JCasC (Configuration as Code) - GitHub credentials з K8s Secret
 - RBAC ClusterRoleBinding - Jenkins може створювати pod-агенти
 
 ### `modules/argo_cd`
+
 Argo CD встановлюється через Helm chart `argoproj/argo-cd`. Вкладений Helm chart (`charts/`) розгортає:
+
 - `Application` CRD - вказує на `charts/django-app` у гілці `lesson-8-9--main`
 - `Repository` Secret - реєструє GitHub репозиторій в Argo CD
 
 ### `charts/django-app`
+
 Helm chart для Django застосунку. Містить:
+
 - `Deployment` з `initContainer` (чекає на готовність PostgreSQL)
 - `StatefulSet` для PostgreSQL з EBS PVC (`subPath: pgdata`)
 - `HorizontalPodAutoscaler` (2-6 реплік за CPU)
 - `ConfigMap` зі змінними середовища
 - `Service` типу LoadBalancer (AWS NLB)
+
+---
+
+## Модуль `rds` - Універсальна база даних
+
+### Опис
+
+Модуль підіймає або **звичайну RDS instance**, або **Aurora Cluster** - залежно від прапора `use_aurora`.
+
+В обох випадках автоматично створюється:
+
+- `aws_db_subnet_group` - розміщує БД у приватних підмережах
+- `aws_security_group` - дозволяє вхідний трафік лише з дозволених CIDR
+- Parameter Group з параметрами `max_connections`, `log_statement`, `work_mem`
+
+---
+
+### Приклад використання
+
+```hcl
+# Варіант A: звичайна RDS PostgreSQL
+module "rds" {
+  source = "./modules/rds"
+
+  project_name       = "myproject"
+  use_aurora         = false
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+
+  engine                 = "postgres"
+  engine_version         = "16.3"
+  parameter_group_family = "postgres16"
+
+  instance_class    = "db.t3.medium"
+  allocated_storage = 20
+  multi_az          = false
+
+  database_name = "appdb"
+  username      = "dbadmin"
+  password      = var.db_password
+}
+
+# Варіант B: Aurora PostgreSQL кластер
+module "rds" {
+  source = "./modules/rds"
+
+  project_name       = "myproject"
+  use_aurora         = true          # <= єдина зміна для Aurora
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+
+  engine                 = "aurora-postgresql"
+  engine_version         = "16.3"
+  parameter_group_family = "aurora-postgresql16"
+
+  instance_class        = "db.r6g.large"
+  aurora_instance_count = 2          # 1 writer + 1 reader
+
+  database_name = "appdb"
+  username      = "dbadmin"
+  password      = var.db_password
+}
+```
+
+---
+
+### Опис змінних
+
+| Змінна                   | Тип          | За замовчуванням    | Опис                                                                                           |
+| ------------------------ | ------------ | ------------------- | ---------------------------------------------------------------------------------------------- |
+| `use_aurora`             | bool         | `false`             | `true` => Aurora Cluster; `false` => RDS instance                                              |
+| `project_name`           | string       | -                   | Префікс для імен всіх ресурсів                                                                 |
+| `vpc_id`                 | string       | -                   | ID VPC                                                                                         |
+| `private_subnet_ids`     | list(string) | -                   | Приватні підмережі (мінімум 2 AZ)                                                              |
+| `allowed_cidr_blocks`    | list(string) | `["10.0.0.0/16"]`   | CIDR для доступу до порту БД                                                                   |
+| `engine`                 | string       | `"postgres"`        | `postgres`, `mysql`, `aurora-postgresql`, `aurora-mysql`                                       |
+| `engine_version`         | string       | `"16.3"`            | Версія engine (напр. `"16.3"`, `"8.0.36"`)                                                     |
+| `parameter_group_family` | string       | `"postgres16"`      | Сімейство parameter group (`postgres16`, `mysql8.0`, `aurora-postgresql16`, `aurora-mysql8.0`) |
+| `instance_class`         | string       | `"db.t3.medium"`    | Клас інстансу (`db.t3.medium`, `db.r6g.large` тощо)                                            |
+| `multi_az`               | bool         | `false`             | Multi-AZ для RDS (Aurora завжди multi-AZ)                                                      |
+| `allocated_storage`      | number       | `20`                | Розмір сховища в ГіБ (тільки для RDS)                                                          |
+| `aurora_instance_count`  | number       | `1`                 | Кількість Aurora інстансів (1 writer + N-1 readers)                                            |
+| `database_name`          | string       | `"appdb"`           | Ім'я початкової БД                                                                             |
+| `username`               | string       | `"dbadmin"`         | Master username                                                                                |
+| `password`               | string       | -                   | Master password (`sensitive`)                                                                  |
+| `skip_final_snapshot`    | bool         | `true`              | Пропустити snapshot при destroy (`false` для продакшн)                                         |
+| `deletion_protection`    | bool         | `false`             | Захист від видалення (`true` для продакшн)                                                     |
+| `db_parameters`          | list(object) | PostgreSQL defaults | Параметри parameter group                                                                      |
+
+---
+
+### Як змінити тип БД, engine або клас інстансу
+
+**Перемикач RDS => Aurora:**
+
+```hcl
+use_aurora             = true
+engine                 = "aurora-postgresql"
+parameter_group_family = "aurora-postgresql16"
+instance_class         = "db.r6g.large"   # Aurora потребує r-серії
+aurora_instance_count  = 2                # writer + 1 reader
+```
+
+**MySQL замість PostgreSQL:**
+
+```hcl
+engine                 = "mysql"
+engine_version         = "8.0.36"
+parameter_group_family = "mysql8.0"
+# db_parameters потрібно переоголосити - log_statement і work_mem є тільки у PostgreSQL:
+db_parameters = [
+  { name = "max_connections", value = "200", apply_method = "pending-reboot" },
+  { name = "slow_query_log",  value = "1",   apply_method = "immediate" },
+]
+```
+
+**Продакшн-налаштування:**
+
+```hcl
+instance_class      = "db.r6g.xlarge"
+multi_az            = true    # RDS; Aurora - завжди multi-AZ
+skip_final_snapshot = false
+deletion_protection = true
+aurora_instance_count = 3     # 1 writer + 2 readers
+```

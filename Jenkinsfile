@@ -89,7 +89,7 @@ spec:
                     git checkout origin/${SRC_BRANCH} -- charts/
 
                     # Оновлюємо тільки тег у values.yaml
-                    sed -i "s/tag:.*/tag: \\"${IMAGE_TAG}\\"/" ${VALUES_FILE}
+                    sed -i "s/^  tag:.*/  tag: \\"${IMAGE_TAG}\\"/" ${VALUES_FILE}
 
                     git add charts/
                     git diff --cached --quiet && echo "Nothing to commit" && exit 0

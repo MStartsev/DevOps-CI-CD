@@ -74,3 +74,32 @@ module "argo_cd" {
 }
 
 # End Phase 2 block
+
+# Підключаємо модуль RDS
+module "rds" {
+  source = "./modules/rds"
+
+  project_name       = "devops-project"
+  use_aurora         = false   # змініть на true для Aurora Cluster
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+
+  # Engine
+  engine                 = "postgres"
+  engine_version         = "16.3"
+  parameter_group_family = "postgres16"
+
+  # Instance
+  instance_class    = "db.t3.medium"
+  allocated_storage = 20
+  multi_az          = false
+
+  # Credentials
+  database_name = "appdb"
+  username      = "dbadmin"
+  password      = var.postgres_password   # вже оголошено в backend.tf
+
+  # Lifecycle
+  skip_final_snapshot = true
+  deletion_protection = false
+}

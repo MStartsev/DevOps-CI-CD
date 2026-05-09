@@ -81,3 +81,24 @@ output "argocd_admin_password_command" {
   description = "Command to retrieve initial Argo CD admin password"
   value       = module.argo_cd.admin_password_command
 }
+
+# RDS outputs
+output "rds_endpoint" {
+  description = "Primary DB endpoint (writer for Aurora, address for RDS)"
+  value       = module.rds.endpoint
+}
+
+output "rds_reader_endpoint" {
+  description = "Aurora reader endpoint (empty when use_aurora = false)"
+  value       = module.rds.reader_endpoint
+}
+
+output "rds_port" {
+  description = "Database port"
+  value       = module.rds.port
+}
+
+output "rds_type" {
+  description = "Database type: 'rds' or 'aurora'"
+  value       = module.rds.type
+}
