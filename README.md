@@ -1,8 +1,11 @@
-# Lesson 8-9 - CI/CD: Jenkins + Argo CD + Helm + Terraform
+# Lesson 10 - Створення гнучкого Terraform-модуля для баз даних
 
 Повний CI/CD процес на AWS EKS:
 **Jenkins** збирає образ => пушить у ECR => оновлює `values.yaml` у Git =>
 **Argo CD** підхоплює зміни => синхронізує Helm chart у кластері.
+
+Додано:
+Модуль `rds` - Універсальна база даних, яка підіймає або **звичайну RDS instance**, або **Aurora Cluster**, залежно від прапора `use_aurora`.
 
 ---
 
@@ -34,7 +37,7 @@ Developer push
 │
 ▼
 Jenkins Pipeline (Kaniko agent в EKS)
-├── 1. git clone lesson-8-9
+├── 1. git clone lesson-db-module
 ├── 2. kaniko build + push => ECR :<BUILD_NUMBER> (via IRSA)
 ├── 3. sed image.tag в charts/django-app/values.yaml
 └── 4. git push => lesson-8-9--main
@@ -62,7 +65,7 @@ Argo CD (watches lesson-8-9--main / charts/django-app)
 terraform {
   # backend "s3" {
   #   bucket         = "your-name-terraform-state-2026"
-  #   key            = "lesson-8-9/terraform.tfstate"
+  #   key            = "lesson-db-module/terraform.tfstate"
   #   region         = "us-west-2"
   #   dynamodb_table = "terraform-locks"
   #   encrypt        = true
@@ -83,7 +86,7 @@ terraform apply -target=module.s3_backend -auto-approve
 terraform {
   backend "s3" {
     bucket         = "your-name-terraform-state-2026"
-    key            = "lesson-8-9/terraform.tfstate"
+    key            = "lesson-db-module/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "terraform-locks"
     encrypt        = true
@@ -199,7 +202,7 @@ kubectl exec --namespace jenkins -it svc/jenkins -c jenkins \
    - SCM: `Git`
    - Repository URL: `https://github.com/MStartsev/DevOps-CI-CD.git`
    - Credentials: `github-credentials`
-   - Branch: `*/lesson-8-9`
+   - Branch: `*/lesson-db-module`
    - Script Path: `Jenkinsfile`
 3. **Save** => **Build Now**
 
