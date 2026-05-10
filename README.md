@@ -331,7 +331,7 @@ module "rds" {
   private_subnet_ids = module.vpc.private_subnet_ids
 
   engine                 = "postgres"
-  engine_version         = "16.3"
+  engine_version         = "16.13"
   parameter_group_family = "postgres16"
 
   instance_class    = "db.t3.medium"
@@ -353,7 +353,7 @@ module "rds" {
   private_subnet_ids = module.vpc.private_subnet_ids
 
   engine                 = "aurora-postgresql"
-  engine_version         = "16.3"
+  engine_version         = "16.13"
   parameter_group_family = "aurora-postgresql16"
 
   instance_class        = "db.r6g.large"
@@ -377,7 +377,7 @@ module "rds" {
 | `private_subnet_ids`     | list(string) | -                   | Приватні підмережі (мінімум 2 AZ)                                                              |
 | `allowed_cidr_blocks`    | list(string) | `["10.0.0.0/16"]`   | CIDR для доступу до порту БД                                                                   |
 | `engine`                 | string       | `"postgres"`        | `postgres`, `mysql`, `aurora-postgresql`, `aurora-mysql`                                       |
-| `engine_version`         | string       | `"16.3"`            | Версія engine (напр. `"16.3"`, `"8.0.36"`)                                                     |
+| `engine_version`         | string       | `"16.13"`           | Версія engine (напр. `"16.13"`, `"8.0.36"`)                                                    |
 | `parameter_group_family` | string       | `"postgres16"`      | Сімейство parameter group (`postgres16`, `mysql8.0`, `aurora-postgresql16`, `aurora-mysql8.0`) |
 | `instance_class`         | string       | `"db.t3.medium"`    | Клас інстансу (`db.t3.medium`, `db.r6g.large` тощо)                                            |
 | `multi_az`               | bool         | `false`             | Multi-AZ для RDS (Aurora завжди multi-AZ)                                                      |
