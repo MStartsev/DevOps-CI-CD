@@ -1,0 +1,61 @@
+# Default values for django-app Helm chart
+# Override per environment: helm install -f values-prod.yaml ...
+
+# Image
+image:
+  repository: "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
+  tag: "1"
+  pullPolicy: Always
+
+# Deployment
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+# Service
+service:
+  type: LoadBalancer # AWS NLB - external access
+  port: 80
+  targetPort: 8000 # Gunicorn inside the container
+
+# HPA (Horizontal Pod Autoscaler)
+autoscaler:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+# ConfigMap - environment variables (from lesson-4 docker-compose)
+config:
+  DJANGO_DEBUG: "False"
+  POSTGRES_DB: "appdb"  # matches RDS database_name; overridden by Argo CD parameters
+  POSTGRES_USER: "dbadmin"  # matches RDS username; overridden by Argo CD parameters
+  POSTGRES_HOST: "" # Overridden by Argo CD with RDS endpoint via Helm parameters
+  POSTGRES_PORT: "5432"
+  ALLOWED_HOSTS: "*"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+
+# Secrets (mounted separately - do not store real values here)
+# Secrets: POSTGRES_PASSWORD and DJANGO_SECRET_KEY
+# kubectl create secret generic django-secret --from-env-file=.env
+secretName: "django-secret"
+
+# PostgreSQL in-cluster (disabled when using RDS)
+postgres:
+  enabled: false  # false = use AWS RDS; true = deploy in-cluster PostgreSQL StatefulSet
+  image: "postgres:16-alpine"
+  storage: "2Gi" 
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
