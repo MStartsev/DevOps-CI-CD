@@ -89,7 +89,7 @@ module "rds" {
 
   # Engine
   engine                 = "postgres"
-  engine_version         = "16.3"
+  engine_version         = "16.13"
   parameter_group_family = "postgres16"
 
   # Instance
