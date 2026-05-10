@@ -1,9 +1,9 @@
 // Jenkinsfile - CI/CD pipeline
 // Stages:
-//   1. Checkout        - clone source repo (branch: lesson-db-module)
+//   1. Checkout        - clone source repo (branch: final-project)
 //   2. Build & Push    - build Docker image with Kaniko, push to ECR
 //   3. Update Helm     - update image.tag in charts/django-app/values.yaml
-//   4. Push to Git     - commit and push to lesson-8-9--main => Argo CD detects and syncs
+//   4. Push to Git     - commit and push to main => Argo CD detects and syncs
 
 
 pipeline {
@@ -33,8 +33,8 @@ spec:
     AWS_REGION  = "us-west-2"
     ECR_REPO    = "585019520715.dkr.ecr.us-west-2.amazonaws.com/devops_project"
     GIT_REPO    = "https://github.com/MStartsev/DevOps-CI-CD.git"
-    SRC_BRANCH  = "lesson-db-module"
-    DEPLOY_BRANCH = "lesson-8-9--main"
+    SRC_BRANCH  = "final-project"
+    DEPLOY_BRANCH = "main"
     VALUES_FILE = "charts/django-app/values.yaml"
     IMAGE_TAG   = "${BUILD_NUMBER}"
   }
@@ -66,7 +66,7 @@ spec:
       }
     }
 
-    stage('Update Helm values.yaml & Push to lesson-8-9--main') {
+    stage('Update Helm values.yaml & Push to main') {
     steps {
         container('git') {
             withCredentials([usernamePassword(
@@ -85,7 +85,7 @@ spec:
                     git fetch origin ${DEPLOY_BRANCH} || true
                     git checkout -B ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH} 2>/dev/null || git checkout -b ${DEPLOY_BRANCH}
 
-                    # Копіюємо ВЕСЬ charts/ з lesson-db-module
+                    # Копіюємо ВЕСЬ charts/ з final-project
                     git checkout origin/${SRC_BRANCH} -- charts/
 
                     # Оновлюємо тільки тег у values.yaml
@@ -105,7 +105,7 @@ spec:
 
   post {
     success {
-      echo "Pipeline finished. Argo CD watches 'lesson-8-9--main' and will sync automatically."
+      echo "Pipeline finished. Argo CD watches 'main' and will sync automatically."
     }
     failure {
       echo "Pipeline failed. Check logs above."

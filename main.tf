@@ -66,11 +66,14 @@ module "argo_cd" {
   cluster_endpoint       = module.eks.cluster_endpoint
   cluster_ca_certificate = module.eks.cluster_ca_certificate
   repo_url               = "https://github.com/MStartsev/DevOps-CI-CD.git"
-  target_branch          = "lesson-8-9--main"
+  target_branch          = "main"
   chart_path             = "charts/django-app"
   ecr_repo_url           = module.ecr.repository_url
   depends_on             = [module.eks]
   app_namespace          = "django-app"
+  rds_endpoint           = module.rds.endpoint
+  rds_database_name      = "appdb"
+  rds_username           = "dbadmin"
 }
 
 # End Phase 2 block
@@ -86,7 +89,7 @@ module "rds" {
 
   # Engine
   engine                 = "postgres"
-  engine_version         = "16.3"
+  engine_version         = "16.13"
   parameter_group_family = "postgres16"
 
   # Instance
@@ -102,4 +105,13 @@ module "rds" {
   # Lifecycle
   skip_final_snapshot = true
   deletion_protection = false
+}
+# Підключаємо модуль Monitoring (Prometheus + Grafana)
+module "monitoring" {
+  source       = "./modules/monitoring"
+  cluster_name = module.eks.cluster_name
+
+  grafana_admin_password = var.grafana_admin_password
+
+  depends_on = [module.eks]
 }

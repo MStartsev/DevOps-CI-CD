@@ -22,7 +22,7 @@ terraform {
 
   backend "s3" {
     bucket         = "mstartsev-terraform-state-2026"
-    key            = "lesson-8-9/terraform.tfstate"
+    key            = "final-project/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "terraform-locks"
     encrypt        = true
@@ -61,6 +61,13 @@ variable "django_secret_key" {
   type        = string
   sensitive   = true
 }
+variable "grafana_admin_password" {
+  description = "Grafana admin password"
+  type        = string
+  sensitive   = true
+  default     = "admin123"
+}
+
 
 
 data "aws_eks_cluster_auth" "main" {

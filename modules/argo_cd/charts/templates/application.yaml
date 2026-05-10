@@ -15,6 +15,17 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+      parameters:
+        # Disable in-cluster PostgreSQL StatefulSet - use AWS RDS
+        - name: postgres.enabled
+          value: "false"
+        # RDS endpoint passed as Django POSTGRES_HOST
+        - name: config.POSTGRES_HOST
+          value: {{ .Values.rdsEndpoint | quote }}
+        - name: config.POSTGRES_DB
+          value: {{ .Values.rdsDatabaseName | quote }}
+        - name: config.POSTGRES_USER
+          value: {{ .Values.rdsUsername | quote }}
 
   destination:
     server: https://kubernetes.default.svc

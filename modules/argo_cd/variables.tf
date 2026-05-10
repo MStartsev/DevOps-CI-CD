@@ -23,7 +23,7 @@ variable "repo_url" {
 variable "target_branch" {
   description = "Git branch to track"
   type        = string
-  default     = "lesson-8-9--main"
+  default     = "main"
 }
 
 variable "chart_path" {
@@ -51,4 +51,21 @@ variable "cluster_endpoint" {
 variable "cluster_ca_certificate" {
   description = "Base64-encoded EKS CA certificate"
   type        = string
+}
+
+variable "rds_endpoint" {
+  description = "AWS RDS endpoint passed to Django as POSTGRES_HOST"
+  type        = string
+}
+
+variable "rds_database_name" {
+  description = "RDS database name"
+  type        = string
+  default     = "appdb"
+}
+
+variable "rds_username" {
+  description = "RDS master username"
+  type        = string
+  default     = "dbadmin"
 }

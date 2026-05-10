@@ -1,11 +1,16 @@
-# Lesson 10 - Створення гнучкого Terraform-модуля для баз даних
+# Final Project - DevOps Infrastructure on AWS
 
-Повний CI/CD процес на AWS EKS:
-**Jenkins** збирає образ => пушить у ECR => оновлює `values.yaml` у Git =>
-**Argo CD** підхоплює зміни => синхронізує Helm chart у кластері.
+Повна DevOps-інфраструктура на AWS, розгорнута через Terraform:
 
-Додано:
-Модуль `rds` - Універсальна база даних, яка підіймає або **звичайну RDS instance**, або **Aurora Cluster**, залежно від прапора `use_aurora`.
+| Компонент        | Роль                                                                 |
+| ---------------- | -------------------------------------------------------------------- |
+| **EKS**          | Kubernetes кластер для всіх сервісів                                 |
+| **ECR**          | Реєстр Docker-образів                                                |
+| **Jenkins**      | CI: збирає образ => пушить у ECR => оновлює `values.yaml`            |
+| **Argo CD**      | CD: підхоплює зміни з Git => синхронізує Helm chart у кластері       |
+| **RDS / Aurora** | База даних PostgreSQL (звичайна або Aurora залежно від `use_aurora`) |
+| **Prometheus**   | Збір метрик з кластера через pull-модель                             |
+| **Grafana**      | Візуалізація метрик, дашборди, алерти                                |
 
 ---
 
@@ -15,6 +20,7 @@
 ├── main.tf | backend.tf | outputs.tf
 ├── Jenkinsfile                         CI pipeline
 ├── modules/
+│   ├── monitoring/    Prometheus + Grafana
 │   ├── s3-backend/    S3 + DynamoDB
 │   ├── vpc/           VPC, підмережі, IGW, NAT GW
 │   ├── ecr/           ECR репозиторій
@@ -37,14 +43,14 @@ Developer push
 │
 ▼
 Jenkins Pipeline (Kaniko agent в EKS)
-├── 1. git clone lesson-db-module
+├── 1. git clone final-project
 ├── 2. kaniko build + push => ECR :<BUILD_NUMBER> (via IRSA)
 ├── 3. sed image.tag в charts/django-app/values.yaml
-└── 4. git push => lesson-8-9--main
+└── 4. git push => main
 
 │ (Git change detected - polling або webhook)
 ▼
-Argo CD (watches lesson-8-9--main / charts/django-app)
+Argo CD (watches main / charts/django-app)
 └── helm upgrade django-app => EKS (automated sync)
 ```
 
@@ -65,7 +71,7 @@ Argo CD (watches lesson-8-9--main / charts/django-app)
 terraform {
   # backend "s3" {
   #   bucket         = "your-name-terraform-state-2026"
-  #   key            = "lesson-db-module/terraform.tfstate"
+  #   key            = "final-project/terraform.tfstate"
   #   region         = "us-west-2"
   #   dynamodb_table = "terraform-locks"
   #   encrypt        = true
@@ -86,7 +92,7 @@ terraform apply -target=module.s3_backend -auto-approve
 terraform {
   backend "s3" {
     bucket         = "your-name-terraform-state-2026"
-    key            = "lesson-db-module/terraform.tfstate"
+    key            = "final-project/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "terraform-locks"
     encrypt        = true
@@ -202,14 +208,14 @@ kubectl exec --namespace jenkins -it svc/jenkins -c jenkins \
    - SCM: `Git`
    - Repository URL: `https://github.com/MStartsev/DevOps-CI-CD.git`
    - Credentials: `github-credentials`
-   - Branch: `*/lesson-db-module`
+   - Branch: `*/final-project`
    - Script Path: `Jenkinsfile`
 3. **Save** => **Build Now**
 
 Після успішного запуску побачиш 3 зелені стадії:
 
 - `Build & Push Docker Image (Kaniko)`
-- `Update Helm values.yaml & Push to lesson-8-9--main`
+- `Update Helm values.yaml & Push to main`
 
 ---
 
@@ -246,7 +252,7 @@ kubectl get svc django-app-service -n django-app
 kubectl get pods -n django-app
 # Має бути:
 # django-app-django-xxx      1/1   Running
-# django-app-postgres-0      1/1   Running
+# (in-cluster postgres не деплоїться - використовується AWS RDS)
 ```
 
 Відкрий у браузері: `http://<EXTERNAL-IP>/admin/login/`
@@ -278,7 +284,7 @@ EBS CSI Driver як EKS managed add-on. Використовує OIDC + IRSA д�
 
 ### `modules/jenkins`
 
-Jenkins встановлюється через Helm chart `jenkins/jenkins` версії `5.8.17` з образом `jenkins/jenkins:2.492.3-lts-jdk17`. Включає:
+Jenkins встановлюється через Helm chart `jenkins/jenkins` версії `5.1.17` з образом `jenkins/jenkins:2.492.3-lts-jdk17`. Включає:
 
 - Kubernetes plugin для dynamic agents (Kaniko + Git контейнери)
 - Kaniko авторизується в ECR через IRSA (`kaniko` ServiceAccount)
@@ -289,15 +295,16 @@ Jenkins встановлюється через Helm chart `jenkins/jenkins` в�
 
 Argo CD встановлюється через Helm chart `argoproj/argo-cd`. Вкладений Helm chart (`charts/`) розгортає:
 
-- `Application` CRD - вказує на `charts/django-app` у гілці `lesson-8-9--main`
+- `Application` CRD - вказує на `charts/django-app` у гілці `main`
 - `Repository` Secret - реєструє GitHub репозиторій в Argo CD
 
 ### `charts/django-app`
 
 Helm chart для Django застосунку. Містить:
 
-- `Deployment` з `initContainer` (чекає на готовність PostgreSQL)
-- `StatefulSet` для PostgreSQL з EBS PVC (`subPath: pgdata`)
+- `Deployment` підключається до AWS RDS через `POSTGRES_HOST` (переданий Argo CD як Helm parameter)
+- `StatefulSet` для PostgreSQL — умовний (`postgres.enabled: false` = вимкнений, використовується RDS)
+- `initContainer` — умовний (активний лише при `postgres.enabled: true`)
 - `HorizontalPodAutoscaler` (2-6 реплік за CPU)
 - `ConfigMap` зі змінними середовища
 - `Service` типу LoadBalancer (AWS NLB)
@@ -426,3 +433,61 @@ skip_final_snapshot = false
 deletion_protection = true
 aurora_instance_count = 3     # 1 writer + 2 readers
 ```
+
+---
+
+## Моніторинг: Prometheus + Grafana
+
+### Розгортання
+
+Модуль `monitoring` встановлюється автоматично через `terraform apply` разом з іншими модулями Phase 2.
+
+Prometheus та Grafana розгортаються у namespace `monitoring` через Helm.
+
+Grafana автоматично налаштовує Prometheus як джерело даних через:
+
+```
+http://prometheus-server.monitoring.svc:80
+```
+
+### Перевірка стану
+
+```bash
+kubectl get all -n monitoring
+# має показати: prometheus-server, grafana, prometheus-alertmanager, prometheus-node-exporter
+```
+
+### Доступ до Prometheus
+
+```bash
+kubectl port-forward svc/prometheus-server 9090:80 -n monitoring
+# Відкрити: http://localhost:9090
+# Перевірити: Status => Target health (всі targets мають бути UP)
+```
+
+### Доступ до Grafana
+
+```bash
+kubectl port-forward svc/grafana 3000:80 -n monitoring
+# Відкрити: http://localhost:3000
+# Login: admin / admin123
+```
+
+### Налаштування дашборду у Grafana
+
+1. Зліва: **Dashboards => Import**
+2. Ввести ID готового дашборду з [grafana.com/grafana/dashboards](https://grafana.com/grafana/dashboards):
+   - `315` - Kubernetes cluster monitoring
+   - `1860` - Node Exporter Full
+3. Обрати джерело даних: **Prometheus**
+4. Натиснути **Import**
+
+### Корисні PromQL-запити
+
+| Запит                                         | Що показує                           |
+| --------------------------------------------- | ------------------------------------ |
+| `up`                                          | Стан усіх targets (1 = UP, 0 = DOWN) |
+| `rate(container_cpu_usage_seconds_total[5m])` | CPU-навантаження контейнерів         |
+| `container_memory_usage_bytes`                | Використання RAM                     |
+| `rate(http_requests_total[1m])`               | HTTP-запити за хвилину               |
+| `kubectl get all -n monitoring`               | Стан всіх ресурсів моніторингу       |

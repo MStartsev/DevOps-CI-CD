@@ -102,3 +102,19 @@ output "rds_type" {
   description = "Database type: 'rds' or 'aurora'"
   value       = module.rds.type
 }
+
+# Monitoring outputs
+output "prometheus_port_forward" {
+  description = "Command to access Prometheus UI"
+  value       = module.monitoring.prometheus_url
+}
+
+output "grafana_port_forward" {
+  description = "Command to access Grafana UI"
+  value       = module.monitoring.grafana_url
+}
+
+output "grafana_datasource_url" {
+  description = "Prometheus URL configured as Grafana data source"
+  value       = module.monitoring.grafana_datasource
+}

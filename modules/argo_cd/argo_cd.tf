@@ -56,5 +56,29 @@ resource "helm_release" "argocd_apps" {
     value = var.ecr_repo_url
   }
 
+
+  # Disable in-cluster PostgreSQL - use AWS RDS instead
+  set {
+    name  = "postgresEnabled"
+    value = "false"
+  }
+
+  # Pass RDS endpoint - application.yaml uses .Values.rdsEndpoint
+  set {
+    name  = "rdsEndpoint"
+    value = var.rds_endpoint
+  }
+
+  # Pass RDS database name and username
+  set {
+    name  = "rdsDatabaseName"
+    value = var.rds_database_name
+  }
+
+  set {
+    name  = "rdsUsername"
+    value = var.rds_username
+  }
+
   depends_on = [helm_release.argocd]
 }
